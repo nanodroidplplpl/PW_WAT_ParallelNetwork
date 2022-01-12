@@ -1,4 +1,4 @@
-package siec;
+package Siec;
 import javax.swing.plaf.InternalFrameUI;
 import java.util.Random;
 
@@ -21,16 +21,18 @@ public class StacjaRobocza extends Thread {
 
     Random r = new Random();
     public void run() {
-        for ( int i = 0; i < N; i++ ) {
+        for ( int i = 1; i <= N; i++ ) {
             try {
-                rr = r.nextInt(2);
-                LR = server.uzyskaj_dostep(rr, grupa, 0, getName(), i, numer);
+                rr = r.nextInt(2)+1;
+                LR = server.uzyskaj_dostep(getName(), rr, grupa, i); // String nazwa, int co_bierzesz, int gr, int nr_powt
                 // LR jezeli 0 to lewy jezeli 1 to prawy
-                sleep(5);
-                server.zakoncz_prace(LR,rr, grupa, 0, getName(), i, numer);
+                sleep(r.nextInt(5));
+                //System.out.println("Moje urzo to "+LR+" jestem "+getName());
+                server.zwolnij_zasob(getName(), rr, grupa, i, LR); // String nazwa, int co_bierzesz, int gr, int nr_powt, int ktore
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 }
+
