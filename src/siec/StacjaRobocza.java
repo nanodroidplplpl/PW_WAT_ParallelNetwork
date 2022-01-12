@@ -23,7 +23,7 @@ public class StacjaRobocza extends Thread {
     public void run() {
         for ( int i = 1; i <= N; i++ ) {
             try {
-                rr = r.nextInt(2)+1;
+                rr = r.nextInt(2);
                 LR = server.uzyskaj_dostep(getName(), rr, grupa, i); // String nazwa, int co_bierzesz, int gr, int nr_powt
                 // LR jezeli 0 to lewy jezeli 1 to prawy
                 sleep(r.nextInt(5));
@@ -35,4 +35,3 @@ public class StacjaRobocza extends Thread {
         }
     }
 }
-
