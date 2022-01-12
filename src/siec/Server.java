@@ -1,147 +1,133 @@
-package siec;
+package Siec;
 
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.*;
-import java.util.concurrent.locks.Condition;
 import java.util.Random;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.*;
+import java.util.concurrent.locks.ReentrantLock;
 
-/* Klasa servera jest monitorem ktory przydziela dostep do urzadzen peryferyjnych */
 public class Server {
-    /* Obiekta zamka */
+    /* Obiekt zamka */
     private final Lock lock = new ReentrantLock();
-
-    /* Tablice i miejsca w nich sa instancjami wirtualnymi urzadzen
-       peryferyjnych. Jezeli true to oznacza ze jest dostep do tablicy,
-       jezeli false to oznacza ze uzadzenie o intex i+1 jest zajete. */
     private Boolean[] skanery = new Boolean[]{false, false};
     private Boolean[] drukarki = new Boolean[]{false, false};
+    Condition gr_1 = lock.newCondition();
+    Condition gr_2 = lock.newCondition();
+    private Condition[] grupa = new Condition[]{gr_1, gr_2};
+    private Boolean[] grupy_w_skan = new Boolean[]{false, false};
+    private Boolean[] grupy_w_druk = new Boolean[]{false, false};
+    private Condition skaner = lock.newCondition();
+    private Condition drukarka = lock.newCondition();
 
-    /* Tablice zmiennych warunkowych jest tablica odpowiedzialna
-       za blokowanie odpowiednich elementow w tablicy urzadzen. */
-    Condition skaner1 = lock.newCondition();
-    Condition skaner2 = lock.newCondition();
-    Condition drukarka1 = lock.newCondition();
-    Condition drukarka2 = lock.newCondition();
-    Condition[] skaneryLock = new Condition[]{skaner1, skaner2};
-    Condition[] drukarkiLock = new Condition[]{drukarka1, drukarka2};
+    Boolean zajete = false;
+    int j;
 
-    /* Zmienne warunkowe dla grup */
-    Condition g1 = lock.newCondition();
-    Condition g2 = lock.newCondition();
-    Condition[] g = new Condition[]{g1, g2};
-
-    /* Ponizej zmienne okreslajace z jakiej grupy stacje robocze sa w zasobach */
-    private int skan = 5;
-    private int druk = 5;
-
-    private int peryferium = 0;
-
-    private int[] w12 = new int[]{0,0};
-    private int[] w23 = new int[]{0,0};
-
-    /* Funcka ponizej prosi od dostep do zasobow zmienna gropa pozwala
-       na identyfikacje odpowiedniej grupy zasobow, ktora ma prawo do
-       danego zasobu. Zmienna rodzaj_urzadzenia okresla o jakim zasobie mowa */
-    Random r = new Random();
-    public int uzyskaj_dostep( int rodzaj_urzadzenia, int grupa, int urzadzenie, String nazwa, int i, int numer ) throws InterruptedException {
+    public int uzyskaj_dostep(String nazwa, int co_bierzesz, int gr, int nr_powt) throws InterruptedException { // grupa jest 0 i 1
         lock.lock();
-        try {
-            // Sprawdzenie ktore urzadzenie bedzie urzyte
-            if ( rodzaj_urzadzenia == 1) {
-                // Poproszono o skaner
-                // Sprawdzenie czy jest wolny skaner
-                urzadzenie = 0;
-                if ( skan == grupa ) {
-                    //g[grupa - 1].await();
-                    System.out.println(nazwa+" dupa");
-                    g[grupa-1].await();
+        j = 0;
+        if ( co_bierzesz == 1) {
+            try {
+                while ( grupy_w_skan[gr] ) {
+                    grupa[gr].await();
                 }
-                skan = grupa;
-                /* Po zwolnieniu zamka nastepuje ponowne sprawdzenie ktory skaner
-                   jest wolny */
-                System.out.println(nazwa+" waru1 ");
-                if (skanery[urzadzenie]) {
-                    skaneryLock[urzadzenie].await();
-                    urzadzenie++;
-                    urzadzenie = urzadzenie % 2;
-                    if (skanery[urzadzenie])
+                zajete = true;
+                for ( int i = 0; i < 2; i++ )
+                {
+                    if ( !skanery[i] )
                     {
-                        skaneryLock[urzadzenie].await();
+                        zajete = false;
+                        j = i;
+                        break;
                     }
                 }
-                System.out.println(nazwa+" warun2 ");
-                /* Po uzystaniu wszystkich dostepow nastepuje kozystanie z zasobu */
-                skanery[urzadzenie] = true;
-                System.out.println("[" + nazwa + "," + i + "]" + ">> skaner " + urzadzenie +" zajetosc skanerow ["+skanery[0]+","+skanery[1]+"]");
-                //skan = 5;
-                //skanery[urzadzenie] = false;
-                //sleep(r.nextInt(10));
-                // Zostawia po sobie informacje co zmienil 1-skaner 2-drukarke oraz ktora pare
-                //ktore_zmienilem[numer];
-                //g[grupa - 1].signal();
-            } else {
-                // Poproszono o drukarke
-                // Sprawdzenie ktore urzadzenie bedzie urzyte
-                if (rodzaj_urzadzenia != 1) {
-                /* Kiedy znaleziono wolny skaner, sprawdzenie czy ktos z tej
-                    samej grupy jest w skanerach i oczekiwanie jezeli tak jest */
-                    if (druk == grupa) {
-                        //g[grupa - 1].await();
-                        //wait();
-                        System.out.println(nazwa+"dupa");
-                        g[grupa-1].await();
-                    }
-                    druk = grupa;
-                /* Po zwolnieniu zamka nastepuje ponowne sprawdzenie ktory skaner
-                   jest wolny */
-                    System.out.println(nazwa+" warun1 ");
-                    if (drukarki[urzadzenie]) {
-                        urzadzenie++;
-                        urzadzenie = urzadzenie % 2;
-                        drukarkiLock[urzadzenie].await();
-                        if (drukarki[urzadzenie])
+                // Jezeli wszystkie skanery sa zajete to czekanie na odp
+                while ( zajete )
+                {
+                    skaner.await();
+                    for ( int i = 0; i < 2; i++ )
+                    {
+                        if ( !skanery[i] )
                         {
-                            drukarkiLock[urzadzenie].await();
+                            j = i;
+                            break;
                         }
-                       // System.out.println("Sprawdzam"+urzadzenie);
                     }
-                    System.out.println(nazwa+" warun2 ");
-                    /* Po uzystaniu wszystkich dostepow nastepuje kozystanie z zasobu */
-                    drukarki[urzadzenie] = true;
-                    System.out.println("[" + nazwa + "," + i + "]" + ">> drukarka " + urzadzenie +" zajetosc drukarek ["+drukarki[0]+","+drukarki[1]+"]");
-                    //drukarki[urzadzenie] = false;
-                    //sleep(r.nextInt(10));
-                    //g[grupa - 1].signal();
                 }
+                // Teraz sa przydzielone wszystkie niezbedne dostepy wchodze do obszaru krytycznego
+                grupy_w_skan[gr] = true;
+                skanery[j] = true;
+                System.out.println("["+nazwa+","+nr_powt+"] >> skaner "+j+" stan skanerow ["+skanery[0]+","+skanery[1]+"] moja grupa "+gr);//+", grupy to ["+grupy_w_skan[0]+","+grupy_w_skan[1]+"]");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
+        } else {
+            try {
+                while ( grupy_w_druk[gr] ) {
+                    grupa[gr].await();
+                }
+                zajete = true;
+                for ( int i = 0; i < 2; i++ )
+                {
+                    if ( !drukarki[i] )
+                    {
+                        zajete = false;
+                        j = i;
+                        break;
+                    }
+                }
+                // Jezeli wszystkie skanery sa zajete to czekanie na odp
+                while ( zajete )
+                {
+                    drukarka.await();
+                    for ( int i = 0; i < 2; i++ )
+                    {
+                        if ( !drukarki[i] )
+                        {
+                            j = i;
+                            break;
+                        }
+                    }
+                }
+                // Teraz sa przydzielone wszystkie niezbedne dostepy wchodze do obszaru krytycznego
+                grupy_w_druk[gr] = true;
+                drukarki[j] = true;
+                System.out.println("["+nazwa+","+nr_powt+"] >> drukarka "+j+" stan drukarek ["+drukarki[0]+","+drukarki[1]+"] moja grupa "+gr);//+", grupy to ["+grupy_w_druk[0]+","+grupy_w_druk[1]+"]");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+            }
         }
-        return urzadzenie;
+        return j;
     }
 
-    /* Ponizsza funkcja opuszcza zajete urzadzenie przez odpowiedni proces */
-    public void zakoncz_prace( int LR, int rodzaj_urzadzenia, int grupa, int urzadzenie, String nazwa, int i, int numer ) throws InterruptedException {
+    public void zwolnij_zasob(String nazwa, int co_bierzesz, int gr, int nr_powt, int ktore) throws InterruptedException {
         lock.lock();
-        // dla skanerow
-        if (rodzaj_urzadzenia == 1)
-        {
-            skanery[LR] = false;
-            skan = 5;
-            skaneryLock[urzadzenie].signal();
-            g[grupa - 1].signal();
-            System.out.println("[" + nazwa + "," + i + "]" + "<<< skaner " + urzadzenie +" zajetosc skanerow ["+skanery[0]+","+skanery[1]+"]");
+        if ( co_bierzesz == 1 ) {
+            try{
+                //System.out.println("Zaczynam zwalnianie skanera ja"+nazwa+" jej nr to "+ ktore);
+                grupy_w_skan[gr] = false;
+                skanery[ktore] = false;
+                grupa[gr].signal();
+                skaner.signal();
+                System.out.println("["+nazwa+","+nr_powt+"] <<< skaner "+ktore+" stan skanerow ["+skanery[0]+","+skanery[1]+"]");
+            } finally {
+                lock.unlock();
+            }
+        } else {
+            try{
+                //System.out.println("Zaczynam zwalnianie drukarki ja"+nazwa+" jej nr to "+ ktore);
+                grupy_w_druk[gr] = false;
+                drukarki[ktore] = false;
+                grupa[gr].signal();
+                drukarka.signal();
+                System.out.println("["+nazwa+","+nr_powt+"] <<< drukarka "+ktore+" stan drukarek ["+drukarki[0]+","+drukarki[1]+"]");
+            } finally {
+                lock.unlock();
+            }
         }
-        else
-        {
-            drukarki[LR] = false;
-            druk = 5;
-            drukarkiLock[urzadzenie].signal();
-            g[grupa - 1].signal();
-            System.out.println("[" + nazwa + "," + i + "]" + "<<< druk " + urzadzenie +" zajetosc drukarek ["+drukarki[0]+","+drukarki[1]+"]");
-        }
-        lock.unlock();
     }
+
+
 }
