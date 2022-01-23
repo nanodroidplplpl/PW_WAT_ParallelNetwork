@@ -25,6 +25,7 @@ public class Server {
     /* Zmienne pomocnicze */
     Boolean zajete = false;
     int j;
+    private int[][] moje = new int[ile_grup_urzadzen][ile_urzadzen_w_grupie];
 
     /* Funkcja do ustalenia parametrow */
     public void init() {
@@ -52,7 +53,7 @@ public class Server {
         }
     }
 
-    public int uzyskaj_dostep( String nazwa, int co_bierzesz, int gr, int nr_powt ) throws InterruptedException {
+    public int uzyskaj_dostep( String nazwa, int co_bierzesz, int gr, int nr_powt, int jato ) throws InterruptedException {
         lock.lock();
         try {
             j = 0;
@@ -64,6 +65,7 @@ public class Server {
                 if ( !urzadzenia[co_bierzesz][i] ) {
                     zajete = false;
                     j = i;
+                    moje[gr][jato] = i;
                     break;
                 }
             }
@@ -73,6 +75,7 @@ public class Server {
                 for ( int i = 0; i < ile_urzadzen_w_grupie; i++ ) {
                     if ( !urzadzenia[co_bierzesz][i] ) {
                         j = i;
+                        moje[gr][jato] = i;
                         break;
                     }
                 }
@@ -89,14 +92,15 @@ public class Server {
         return j;
     }
 
-    public void zwolnij_zasob( String nazwa, int co_bierzesz, int gr, int nr_powt, int ktore ) throws InterruptedException {
+    public void zwolnij_zasob( String nazwa, int co_bierzesz, int gr, int nr_powt, int ktore, int jato ) throws InterruptedException {
         lock.lock();
         try{
             grupy_w_urzadzeniu[co_bierzesz][gr] = false;
             urzadzenia[co_bierzesz][ktore] = false;
+            //urzadzenia[co_bierzesz][moje[gr][jato]] = false;
             grupa[co_bierzesz][gr].signal();
             urzadzenie[co_bierzesz].signal();
-            System.out.println("["+nazwa+","+nr_powt+"] <<< urzadzenie "+ktore+" stan {"+co_bierzesz+"} ["+urzadzenia[co_bierzesz][0]+","+urzadzenia[co_bierzesz][1]+"]");
+            System.out.println("["+nazwa+","+nr_powt+"] <<< urzadzenie "+ktore+" stan {"+co_bierzesz+"} ["+urzadzenia[co_bierzesz][0]+","+urzadzenia[co_bierzesz][1]+"] a to "+moje[gr][jato]);
         } finally {
             lock.unlock();
         }
