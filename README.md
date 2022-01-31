@@ -3,3 +3,4 @@
 
 Poniżej przedstawiam przykładowy zrzut ekranu z okna aplikacji.
 ![Zrzut ekranu 2022-01-31 o 19 40 47](https://user-images.githubusercontent.com/52038211/151853240-6efc56d9-a041-4712-ac5f-0a4498b17e3b.png)
+Czarna kreska symbolizuje ustanowienie połączenia, a czerwona kropka właściwe dane które są przekazywane pomiedzy komputerem a urządzeniem.
